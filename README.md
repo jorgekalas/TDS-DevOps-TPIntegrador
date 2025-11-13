@@ -3,7 +3,7 @@
 
 ## Descripción general
 
-Esta API está orientada a mejorar la organización interna de la inmobiliaria **Alquilarte**, una mediana empresa.  
+Esta API está orientada a mejorar la organización interna de la inmobiliaria **Alquilarte**, una empresa mediana.  
 Permite gestionar tareas, usuarios y áreas funcionales, con el objetivo de optimizar procesos administrativos, comerciales y operativos.
 
 ---
