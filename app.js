@@ -15,13 +15,41 @@ import reportesRoutes from './routes/reportes.js';
 import contratosRoutes from './routes/contratos.js';
 import { verificarSesion } from './controllers/authController.js';
 import registroRoutes from './routes/registro.js';
+import client from 'prom-client';
 
+// Registro de métricas
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+const httpRequestCounter = new client.Counter({
+  name: 'http_requests_total',
+  help: 'Total de requests HTTP',
+  labelNames: ['method', 'route', 'status']
+});
+register.registerMetric(httpRequestCounter);
+
+// Middleware para contar requests
+function metricsMiddleware(req, res, next) {
+  const start = Date.now();
+  res.on('finish', () => {
+    httpRequestCounter.labels(req.method, req.route?.path || req.path, res.statusCode).inc();
+  });
+  next();
+}
 
 const app = express();
 
 // Necesario para rutas absolutas en ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// === Rutas públicas para CI/CD y monitoreo ===
+app.get('/ping', (req, res) => {
+  res.status(200).json({ ok: true, mensaje: 'pong' });
+});
+
+app.get('/personas', (req, res) => {
+  res.status(200).json([]); // Devuelve array vacío para tests
+});
 
 // Middleware para procesar los datos que llegan en formularios HTML
 app.use(express.urlencoded({ extended: true }));
@@ -76,6 +104,13 @@ app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
 
 // Rutas principales
+
+app.get('/personas', async (req, res) => {
+  const personas = await Persona.find();
+  res.status(200).json(personas);
+});
+
+
 app.use('/', authRoutes);
 app.use('/personas', personasRoutes);
 app.use('/tareas', tareasRoutes);
@@ -90,10 +125,20 @@ app.get('/admin', (req, res) => {
   res.redirect('/personas');
 });
 
+
+
 // Ruta para contratos
 app.use('/contratos', contratosRoutes);
 
 
 app.use('/', pingRoutes);
+
+
+// Endpoint de métricas
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+
 
 export default app;

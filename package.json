@@ -17,6 +17,7 @@
     "express-session": "^1.18.1",
     "mongoose": "^8.16.1",
     "mongoose-sequence": "^6.0.1",
+    "prom-client": "^15.1.3",
     "pug": "^3.0.2"
   },
   "devDependencies": {
