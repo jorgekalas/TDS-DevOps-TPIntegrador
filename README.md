@@ -1,100 +1,281 @@
-# API Inmobiliaria – Proyecto Integrador de Desarrollo Web Backend
+🏠 API Inmobiliaria – Proyecto Integrador DevOps (Backend + CI/CD + Docker + Monitoreo)
+📘 Descripción general
+
+Esta API está orientada a optimizar la gestión interna de la inmobiliaria Alquilarte, una empresa mediana dedicada a la administración de propiedades, clientes y contratos.
+El sistema permite administrar tareas y áreas funcionales para mejorar la eficiencia administrativa, comercial y operativa.
+
+A lo largo de este trabajo, se aplicaron prácticas DevOps completas, incluyendo:
+
+Control de versiones con GitFlow
+
+Contenerización con Docker
+
+Integración y Despliegue Continuo (CI/CD) con GitHub Actions + Render
+
+Testing automatizado con Jest y Supertest
+
+Monitoreo con Prometheus + Grafana
+
+Infraestructura como Código (IaC) con Terraform (opcional)
+
+🎯 Objetivos generales
+
+Mejorar la arquitectura y mantenibilidad del software desarrollado por encargo.
+
+Integrar equipos de trabajo aplicando metodologías ágiles y prácticas DevOps.
+
+Desempeñarse de manera autónoma en entornos de desarrollo profesional.
+
+Incorporar herramientas de automatización y monitoreo de infraestructura.
+
+⚙️ Objetivos específicos
+
+Desarrollar una aplicación web utilizando Node.js + Express + Pug.
+
+Integrar una base de datos MongoDB Atlas.
+
+Implementar pruebas automatizadas con Jest y Supertest.
+
+Dockerizar el entorno y crear workflows CI/CD para build, test y deploy automático.
+
+Desplegar la app en la nube (Render) con integración continua.
+
+Añadir monitoreo en tiempo real mediante Prometheus y Grafana.
+
+Explorar Infraestructura como Código (IaC) con Terraform.
+
+🚀 Funcionalidades principales
+
+CRUD de Personas, Clientes, Propiedades, Contratos y Reportes.
+
+Testing automatizado para endpoints críticos (/ping, /personas).
+
+Despliegue automático en Render mediante Deploy Hook.
+
+Métricas Prometheus expuestas en /metrics.
+
+Dashboard en Grafana para visualización del rendimiento.
+
+CI/CD completo mediante GitHub Actions.
+
+Infraestructura reproducible con Terraform (opcional).
+
+📁 Estructura del Proyecto (Versión 2.0 – DevOps)
+├─ app.js                 # Configuración Express, healthcheck, /metrics
+├─ index.js               # Bootstrap server + conexión MongoDB
+├─ routes/                # Endpoints REST (personas, clientes, propiedades…)
+├─ views/                 # Plantillas Pug
+├─ tests/                 # Jest + Supertest
+├─ Dockerfile             # Imagen Node.js para la app
+├─ docker-compose.yml     # App + Mongo + Prometheus + Grafana
+├─ infra/
+│   └─ terraform/         # Ejemplo de IaC con provider docker
+├─ .github/workflows/
+│   ├─ ci-test.yml        # CI – Build, test y build Docker
+│   └─ deploy.yml         # CD – Deploy automático a Render
+└─ README.md
+
+🌐 Rutas principales
+Ruta	Descripción
+/ping	Endpoint de salud (utilizado en CI y healthcheck Docker)
+/personas	Gestión de personal (API REST y tests)
+/clientes	CRUD de clientes con vistas Pug
+/propiedades	CRUD de propiedades vinculadas a clientes
+/metrics	Exposición de métricas para Prometheus
+
+🧱 Dockerización
+
+Dockerfile principal:
+
+FROM node:18-alpine
+WORKDIR /app
+
+RUN apk add --no-cache bash
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+
+EXPOSE 3000
+ENV PORT=3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ping || exit 1
+
+CMD ["npm", "start"]
 
 
-## Descripción general
+Ejecutar localmente:
 
-Esta API está orientada a mejorar la organización interna de la inmobiliaria **Alquilarte**, una empresa mediana.  
-Permite gestionar tareas, usuarios y áreas funcionales, con el objetivo de optimizar procesos administrativos, comerciales y operativos.
+# Build y run manual
+docker build -t tds-devops-tpintegrador-app .
+docker run -p 3000:3000 --env MONGO_URI=<atlas-uri> tds-devops-tpintegrador-app
 
----
+# O con docker-compose
+docker compose up -d
 
-## Objetivos generales
-- Mejorar el software desarrollado por encargo
-- Integrar equipos de proyecto para el desarrollo
-- Liderar grupos de trabajo y asumir roles especializados.
-- Desempeñarse de manera autónoma en el desarrollo de sistemas de complejidad.
-- Implementar otros conocimientos de otras áreas al desarrollo (FrontEnd, Ing de Software)
 
----
+Servicios disponibles:
 
-## Objetivos específicos 
-1. Desarrollar una aplicación web utilizando Node.js y Express.
-2. Integrar una base de datos con Mongo Atlas
-3. Aplicar conceptos de Autenticación y autorización JWT, Token, Bycript,
-PasswordHash, Passport, Sesiones, Testing JEST, Supertest, Websocket,
-Vercel, etc
-4. Revisar la implementación del sistema anterior de rutas dinámicas y
-middleware, asincronía y manejo de promesas.
-5. Seguir buenas prácticas de desarrollo.
+App: http://localhost:3000
 
----
+Prometheus: http://localhost:9090
 
-## Funcionalidades principales
-- Gestión de Personas: CRUD completo con validaciones y autoincremento de ID.
-- Gestión de Clientes: CRUD completo adaptado con vistas Pug.
-- Gestión de Propiedades: CRUD con relación a propietarios y estado de inmuebles.
-- Testing automatizado para asegurar la estabilidad del backend.
-- Despliegue en la nube con Render, accesible públicamente.
+Grafana: http://localhost:3001
 
----
+🧪 Testing automatizado
 
-## 📁 Estructura del Proyecto – Versión 1.1
+Pruebas básicas con Jest y Supertest:
 
-- 📁 **models/** → Esquemas de datos con Mongoose  
-- 📁 **controllers/** → Lógica de negocio y controladores  
-- 📁 **routes/** → Definición de rutas REST  
-- 📁 **views/** → Vistas Pug para renderizado del frontend  
-- 📁 **tests/** → Pruebas automatizadas con Jest y Supertest  
-- 📁 **public/** → Recursos estáticos como estilos .css  
+import request from 'supertest';
+import app from '../app.js';
 
-- 📄 **app.js** → Configuración de Express y definición de rutas  
-- 📄 **index.js** → Conexión a MongoDB Atlas y arranque del servidor  
-- 📄 **.env** → Variables de entorno (MONGO_URI, PORT)  
-- 📄 **package.json** → Configuración de dependencias y scripts
+describe('Test ruta /ping', () => {
+  it('GET /ping responde 200 y mensaje pong', async () => {
+    const res = await request(app).get('/ping');
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ ok: true, mensaje: 'pong' });
+  });
+});
 
----
 
-##  Rutas principales
+El workflow CI ejecuta los tests automáticamente en cada push o pull request a develop.
 
-- `/` – Página de inicio
-- `/personas` – Gestión del personal
-- `/clientes` – Gestión de clientes
-- `/propiedades` – Gestión de propiedades
+🔄 CI/CD – Integración y Despliegue Continuo
 
----
+Pipeline general:
 
-## Despliegue
- El backend está desplegado y disponible públicamente en Render:
+feature/* → develop → main → Render
 
-  https://alquilarte-api.onrender.com
 
----
+CI – Build & Test:
 
-## Tecnologías utilizadas
-- Express.js
-- MongoDB Atlas (Mongoose ODM)
-- Pug (motor de plantillas)
-- dotenv (variables de entorno)
-- Jest y Supertest (testing automatizado)
-- Render (plataforma de despliegue)
-- mongoose-sequence (autoincremento de IDs)
-- Postman para pruebas
-- Git y GitHub para control de versiones
----
+name: CI - Build & Test
+on:
+  pull_request:
+    branches: [ develop, main ]
+  push:
+    branches: [ develop ]
 
-## Instalación local
-1. Clonar el repositorio:
-git clone https://github.com/Ariadna-S708/TDS-DevOps-TPIntegrador.git
-2. Instalar dependencias: npm install
-3. Crear archivo .env con la siguiente variable:
-MONGO_URI=mongodb+srv://usuario:contraseña@cluster.mongodb.net/base_de_datos?retryWrites=true&w=majority
-4. Iniciar el servidor: npm start
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm test
+      - run: docker build -t tds-devops-tpintegrador-app .
 
-## Usuarios de acceso
-## Admin:
-    Usuario: admin
-    Contraseña: admin123
 
-## Empleado:
-    Usuario: Agente 3
-    Contraseña: agente
+CD – Deploy automático a Render:
+
+name: CD - Deploy to Render
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Trigger Render Deploy
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+
+
+Secrets requeridos:
+
+RENDER_DEPLOY_HOOK = https://api.render.com/deploy/srv-xxxx?key=yyyy
+
+
+Cada push a main dispara automáticamente el despliegue en Render:
+👉 https://tds-devops-tpintegrador.onrender.com
+
+🧩 Infraestructura como Código (IaC) – Opcional
+
+Ejemplo de Terraform para levantar la app con el provider Docker:
+
+provider "docker" {}
+
+resource "docker_image" "app" {
+  name = "tds-devops-tpintegrador-app"
+}
+
+resource "docker_container" "app" {
+  name  = "alquilarte-app"
+  image = docker_image.app.latest
+  ports {
+    internal = 3000
+    external = 3000
+  }
+}
+
+
+Comandos:
+
+cd infra/terraform
+terraform init
+terraform apply -auto-approve
+
+📊 Monitoreo y métricas
+
+La app expone métricas Prometheus en /metrics, recolectadas con prom-client.
+El docker-compose.yml incluye contenedores de Prometheus y Grafana preconfigurados.
+
+prometheus.yml ejemplo:
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'alquilarte'
+    static_configs:
+      - targets: ['app:3000']
+
+🔧 Instalación local
+# 1. Clonar el repositorio
+git clone https://github.com/jorgekalas/TDS-DevOps-TPIntegrador.git
+cd TDS-DevOps-TPIntegrador
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Configurar entorno
+echo "MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/db" > .env
+echo "PORT=3000" >> .env
+
+# 4. Ejecutar servidor
+npm start
+
+👥 Roles del equipo
+
+Ariana (Backend & Testing Lead):	Diseño de rutas y controladores, armado de Jest + Supertest
+Maxi (Docker & Monitoreo):	Dockerfile, docker-compose, Prometheus y Grafana
+Jorge (DevOps & CI/CD)	Workflows en GitHub Actions, Deploy Hook Render, integración Mongo Atlas
+
+⚠️ Dificultades enfrentadas
+
+Error 302 en CI: solucionado exponiendo rutas públicas /ping y /personas.
+
+“Dockerfile not found” en Linux runner: se corrigió capitalización.
+
+Push rechazado por Internal Server Error: reintento con --force-with-lease.
+
+Falta de permisos en repo original: se resolvió creando un fork propio.
+
+Conexión Atlas rechazada: se agregó 0.0.0.0/0 a la whitelist.
+
+✅ Conclusión
+
+El proyecto Alquilarte – API Inmobiliaria alcanzó un flujo DevOps completo y automatizado:
+
+CI/CD funcional,
+
+dockerización total,
+
+despliegue continuo en Render,
+
+monitoreo activo y IaC opcional.
+
+El resultado es un sistema escalable, mantenible y demostrativo de un pipeline profesional, integrando todas las etapas del ciclo de vida de software moderno.
