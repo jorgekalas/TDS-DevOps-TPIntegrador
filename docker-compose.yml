@@ -24,7 +24,7 @@ services:
     volumes:
       - ./data:/data/db
 
-  prom:
+  prometheus:
     image: prom/prometheus:latest
     container_name: alquilarte-prom
     ports:

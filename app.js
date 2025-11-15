@@ -1,144 +1,134 @@
-import express from 'express';
-import authRoutes from './routes/auth.js';
-import personasRoutes from './routes/personas.js';
-import tareasRoutes from './routes/tareas.js';
-import { adminPanel } from './controllers/adminController.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dashboardRoutes from './routes/dashboard.js';
-import clientesRoutes from './routes/clientes.js';
-import session from 'express-session';
-import cookieParser from 'cookie-parser';
-import propiedadesRoutes from './routes/propiedades.js';
-import pingRoutes from './routes/index.js';
-import reportesRoutes from './routes/reportes.js';
-import contratosRoutes from './routes/contratos.js';
-import { verificarSesion } from './controllers/authController.js';
-import registroRoutes from './routes/registro.js';
-import client from 'prom-client';
+import express from "express";
+import authRoutes from "./routes/auth.js";
+import personasRoutes from "./routes/personas.js";
+import tareasRoutes from "./routes/tareas.js";
+import { adminPanel } from "./controllers/adminController.js";
+import path from "path";
+import { fileURLToPath } from "url";
+import dashboardRoutes from "./routes/dashboard.js";
+import clientesRoutes from "./routes/clientes.js";
+import session from "express-session";
+import cookieParser from "cookie-parser";
+import propiedadesRoutes from "./routes/propiedades.js";
+import pingRoutes from "./routes/index.js";
+import reportesRoutes from "./routes/reportes.js";
+import contratosRoutes from "./routes/contratos.js";
+import registroRoutes from "./routes/registro.js";
+import { verificarSesion } from "./controllers/authController.js";
 
-// Registro de métricas
-const register = new client.Registry();
-client.collectDefaultMetrics({ register });
-const httpRequestCounter = new client.Counter({
-  name: 'http_requests_total',
-  help: 'Total de requests HTTP',
-  labelNames: ['method', 'route', 'status']
-});
-register.registerMetric(httpRequestCounter);
+import client from "prom-client"; // MÉTRICAS
 
-// Middleware para contar requests
-function metricsMiddleware(req, res, next) {
-  const start = Date.now();
-  res.on('finish', () => {
-    httpRequestCounter.labels(req.method, req.route?.path || req.path, res.statusCode).inc();
-  });
-  next();
-}
-
+// =========================================
+// 1. INICIAR APP
+// =========================================
 const app = express();
 
-// Necesario para rutas absolutas en ESM
+// Para rutas absolutas
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// === Rutas públicas para CI/CD y monitoreo ===
-app.get('/ping', (req, res) => {
-  res.status(200).json({ ok: true, mensaje: 'pong' });
+// =========================================
+// 2. MÉTRICAS — INICIALIZAR ANTES DE RUTAS
+// =========================================
+
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
+
+const httpRequestCounter = new client.Counter({
+    name: "http_requests_total",
+    help: "Total de requests HTTP",
+    labelNames: ["method", "route", "status"],
 });
 
-app.get('/personas', (req, res) => {
-  res.status(200).json([]); // Devuelve array vacío para tests
+register.registerMetric(httpRequestCounter);
+
+app.use((req, res, next) => {
+    res.on("finish", () => {
+        httpRequestCounter
+            .labels(req.method, req.route?.path || req.path, res.statusCode)
+            .inc();
+    });
+    next();
 });
 
-// Middleware para procesar los datos que llegan en formularios HTML
+// Endpoint /metrics REAL
+app.get("/metrics", async (req, res) => {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+});
+
+// =========================================
+// 3. RUTAS PÚBLICAS NECESARIAS PARA CI/CD
+// =========================================
+
+app.get("/ping", (req, res) => {
+    res.status(200).json({ ok: true, mensaje: "pong" });
+});
+
+// Para pruebas unitarias
+app.get("/personas", (req, res) => {
+    res.status(200).json([]);
+});
+
+// =========================================
+// 4. MIDDLEWARES
+// =========================================
+
 app.use(express.urlencoded({ extended: true }));
-
-// Middleware para procesar datos JSON en las peticiones HTTP.
 app.use(express.json());
-
-// Middleware para cookies
 app.use(cookieParser());
 
-//Para usar archivos desde la carpeta public (estilos css)
-app.use(express.static('public'));
-app.use(session({
-  secret: 'clave-secreta',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60 // 1 hora (milisegundos)
-  }
-}));
+app.use(express.static("public"));
 
-// Middleware para que usuario esté disponible en todas las vistas
+app.use(
+    session({
+        secret: "clave-secreta",
+        resave: false,
+        saveUninitialized: false,
+        cookie: { maxAge: 1000 * 60 * 60 },
+    })
+);
+
 app.use((req, res, next) => {
-	res.locals.usuario = req.session.usuario || null;
-	next();
+    res.locals.usuario = req.session.usuario || null;
+    next();
 });
 
-// Para autenticación
+// =========================================
+// 5. AUTENTICACIÓN Y PROTECCIÓN
+// =========================================
+
 app.use(authRoutes);
-
-// Para registro de usuarios
-app.use('/registro', registroRoutes);
-
+app.use("/registro", registroRoutes);
 
 app.use(verificarSesion);
 
-// Para dashboard
-app.use('/dashboard', dashboardRoutes);
+// =========================================
+// 6. ROUTING PRINCIPAL
+// =========================================
 
-//Para clientes
-app.use('/clientes', clientesRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/clientes", clientesRoutes);
+app.use("/propiedades", propiedadesRoutes);
+app.use("/reportes", reportesRoutes);
+app.use("/contratos", contratosRoutes);
+app.use("/tareas", tareasRoutes);
+app.use("/personas", personasRoutes);
 
-//Para propiedades
-app.use('/propiedades', propiedadesRoutes);
+app.get("/admin", adminPanel);
 
-//Para reportería
-app.use('/reportes', reportesRoutes);
+app.use("/", pingRoutes);
 
-// Configuramos Pug como el motor de plantillas
-// para renderizar las vistas en el servidor
-app.set('view engine', 'pug');
-app.set('views', path.join(__dirname, 'views'));
+// =========================================
+// 7. VIEWS
+// =========================================
 
-// Rutas principales
+app.set("view engine", "pug");
+app.set("views", path.join(__dirname, "views"));
 
-app.get('/personas', async (req, res) => {
-  const personas = await Persona.find();
-  res.status(200).json(personas);
+// Ruta principal
+app.get("/", (req, res) => {
+    res.redirect("/dashboard");
 });
-
-
-app.use('/', authRoutes);
-app.use('/personas', personasRoutes);
-app.use('/tareas', tareasRoutes);
-app.get('/admin', adminPanel);
-
-// Ruta principal: redirige al dashboard
-app.get('/', (req, res) => {
-  res.redirect('/dashboard');
-});
-
-app.get('/admin', (req, res) => {
-  res.redirect('/personas');
-});
-
-
-
-// Ruta para contratos
-app.use('/contratos', contratosRoutes);
-
-
-app.use('/', pingRoutes);
-
-
-// Endpoint de métricas
-app.get('/metrics', async (_req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-
 
 export default app;
