@@ -194,29 +194,39 @@ Cada push a main dispara automáticamente el despliegue en Render:
 
 🧩 Infraestructura como Código (IaC) – Opcional
 
-Ejemplo de Terraform para levantar la app con el provider Docker:
+La infraestructura del proyecto se modela mediante Terraform en el archivo main.tf ubicado en la raíz del repositorio.
 
-provider "docker" {}
+🧱 ¿Qué modela main.tf?
 
-resource "docker_image" "app" {
-  name = "tds-devops-tpintegrador-app"
-}
+A alto nivel, el main.tf:
 
-resource "docker_container" "app" {
-  name  = "alquilarte-app"
-  image = docker_image.app.latest
-  ports {
-    internal = 3000
-    external = 3000
-  }
-}
+Declara el provider (por ejemplo, docker) para gestionar recursos de la app como infraestructura.
 
+Define la imagen de la aplicación (basada en el Dockerfile del proyecto).
 
-Comandos:
+Declara uno o más recursos de contenedor para levantar la API inmobiliaria con:
 
-cd infra/terraform
+Puertos publicados (interno 3000 → externo 3000).
+
+Variables de entorno como MONGO_URI y PORT.
+
+Esto permite levantar la app como un recurso de infraestructura gestionado por Terraform, manteniendo la configuración declarativa.
+
+🔎 Nota: La carpeta infra/terraform/ queda como espacio de trabajo y extensión para versiones futuras, laboratorios adicionales o variantes de IaC, pero el archivo activo y principal del proyecto es main.tf en la raíz.
+
+▶️ Comandos básicos
+# Desde la raíz del proyecto
 terraform init
+terraform plan
 terraform apply -auto-approve
+
+Con esto Terraform:
+
+Lee main.tf.
+
+Crea/actualiza los recursos declarados (por ejemplo, la imagen y el contenedor de la app).
+
+Deja la infraestructura en el estado deseado de forma reproducible.
 
 📊 Monitoreo y métricas
 
